@@ -1,4 +1,4 @@
-"""Nautobot custom jobs credentials class."""
+"""Nautobot custom credentials class."""
 
 import os
 
