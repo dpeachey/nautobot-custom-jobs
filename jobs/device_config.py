@@ -15,7 +15,16 @@ from nornir_napalm.plugins.tasks import napalm_configure
 
 from nornir_utils.plugins.functions import print_result
 
-from nautobot.dcim.models import Device, DeviceType, Platform
+from nautobot.dcim.models import (
+    Device,
+    DeviceRole,
+    DeviceType,
+    Manufacturer,
+    Platform,
+    Region,
+    Site,
+)
+from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.extras.jobs import BooleanVar, Job, MultiObjectVar
 
 InventoryPluginRegister.register("nautobot-inventory", NautobotORMInventory)
@@ -36,6 +45,27 @@ def init_nornir(data) -> InitNornir:
                 "queryset": get_job_filter(data),
             },
         },
+    )
+
+
+class FormEntry:
+    """Form entries."""
+
+    tenant_group = MultiObjectVar(model=TenantGroup, required=False)
+    tenant = MultiObjectVar(model=Tenant, required=False)
+    region = MultiObjectVar(model=Region, required=False)
+    site = MultiObjectVar(model=Site, required=False)
+    role = MultiObjectVar(model=DeviceRole, required=False)
+    manufacturer = MultiObjectVar(model=Manufacturer, required=False)
+    platform = MultiObjectVar(model=Platform, required=False)
+    device_type = MultiObjectVar(
+        model=DeviceType, required=False, display_field="display_name"
+    )
+    device = MultiObjectVar(model=Device, required=False)
+    dry_run = BooleanVar(
+        label="Dry run config replacement",
+        default=True,
+        required=False,
     )
 
 
@@ -95,7 +125,7 @@ class LogResult:
         """Subtask instance started logger."""
 
 
-class ReplaceDeviceConfig(Job):
+class ReplaceDeviceConfig(FormEntry, Job):
     """Replace device configuration job."""
 
     class Meta:
@@ -105,30 +135,16 @@ class ReplaceDeviceConfig(Job):
         description = "Replace configuration on device"
         read_only = True
 
-    device_type = MultiObjectVar(
-        label="Device Types",
-        model=DeviceType,
-        required=False,
-    )
-    platform = MultiObjectVar(
-        label="Platforms",
-        model=Platform,
-        required=False,
-    )
-    device = MultiObjectVar(
-        label="Devices",
-        model=Device,
-        required=False,
-        query_params={
-            "device_type_id": "$device_type",
-            "platform_id": "$platform",
-        },
-    )
-    dry_run = BooleanVar(
-        label="Dry run config replacement",
-        default=True,
-        required=False,
-    )
+    tenant_group = FormEntry.tenant_group
+    tenant = FormEntry.tenant
+    region = FormEntry.region
+    site = FormEntry.site
+    role = FormEntry.role
+    manufacturer = FormEntry.manufacturer
+    platform = FormEntry.platform
+    device_type = FormEntry.device_type
+    device = FormEntry.device
+    dry_run = FormEntry.dry_run
 
     def run(self, data, commit) -> None:
         """Run replace device config job."""
