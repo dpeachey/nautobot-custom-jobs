@@ -120,7 +120,7 @@ class LogResult:
     def subtask_instance_completed(
         self, task: Task, host: Host, result: MultiResult
     ) -> None:
-        """Subtask instance started logger."""
+        """Subtask instance completed logger."""
 
 
 class ReplaceDeviceConfig(FormEntry, Job):
