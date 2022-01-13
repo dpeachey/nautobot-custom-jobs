@@ -58,9 +58,7 @@ class FormEntry:
     role = MultiObjectVar(model=DeviceRole, required=False)
     manufacturer = MultiObjectVar(model=Manufacturer, required=False)
     platform = MultiObjectVar(model=Platform, required=False)
-    device_type = MultiObjectVar(
-        model=DeviceType, required=False, display_field="display_name"
-    )
+    device_type = MultiObjectVar(model=DeviceType, required=False)
     device = MultiObjectVar(model=Device, required=False)
     dry_run = BooleanVar(
         label="Dry run config replacement",
