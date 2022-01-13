@@ -21,7 +21,7 @@ Follow the Nautobot documentation to install the jobs using either the Git repos
 ### Credentials
 ---
 
-Jobs that connect to devices need to use credentials to do so and the `nautobot-plugin-nornir` plugin already provides a way to set a default username and password, as detailed here: https://github.com/nautobot/nautobot-plugin-nornir#credentials
+Jobs that connect to devices need to use credentials to do so and the `nautobot-plugin-nornir` plugin already provides a way to set a default username and password, as detailed here: https://github.com/nautobot/nautobot-plugin-nornir#installation
 
 If customised credential logic is required it is possible to create a custom credential class and write your own credential logic.
 
