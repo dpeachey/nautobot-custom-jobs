@@ -169,6 +169,6 @@ class ReplaceDeviceConfig(FormEntry, Job):
         # Run NAPALM task to replace config with intended config
         task.run(
             task=napalm_configure,
-            replace=True,
+            #replace=True,
             configuration=intended_config,
         )
