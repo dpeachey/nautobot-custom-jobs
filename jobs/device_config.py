@@ -61,7 +61,6 @@ class FormEntry:
     platform = MultiObjectVar(model=Platform, required=False)
     device_type = MultiObjectVar(model=DeviceType, required=False)
     device = MultiObjectVar(model=Device, required=False)
-    replace_config = BooleanVar(label="Replace config", required=False)
     dry_run = BooleanVar(
         label="Dry run",
         default=True,
@@ -125,14 +124,14 @@ class LogResult:
         """Subtask instance completed logger."""
 
 
-class ConfigureDevice(FormEntry, Job):
-    """Configure device job."""
+class MergeConfig(FormEntry, Job):
+    """Merge configuration job."""
 
     class Meta:
         """Job attributes."""
 
-        name = "Configure device"
-        description = "Configure device with intended configuration"
+        name = "Merge configuration"
+        description = "Merge device configuration with intended configuration"
         read_only = True
 
     tenant_group = FormEntry.tenant_group
@@ -144,7 +143,6 @@ class ConfigureDevice(FormEntry, Job):
     platform = FormEntry.platform
     device_type = FormEntry.device_type
     device = FormEntry.device
-    replace_config = FormEntry.replace_config
     dry_run = FormEntry.dry_run
 
     def run(self, data, commit) -> None:
@@ -156,13 +154,12 @@ class ConfigureDevice(FormEntry, Job):
                 nr.run(
                     task=self._config_device,
                     name=self.name,
-                    replace_config=data["replace_config"],
                 )
         except Exception as err:
             self.log_failure(None, f"```\n{err}\n```")
             raise
 
-    def _config_device(self, task: Task, replace_config: Boolean) -> Result:
+    def _config_device(self, task: Task) -> Result:
         """NAPALM configure task."""
         # Get device object and intended configuration
         device_obj = task.host.data["obj"]
@@ -173,6 +170,57 @@ class ConfigureDevice(FormEntry, Job):
         # Run NAPALM task to configure device with intended config
         task.run(
             task=napalm_configure,
-            replace=replace_config,
+            replace=False,
+            configuration=intended_config,
+        )
+
+
+class ReplaceConfig(FormEntry, Job):
+    """Replace configuration job."""
+
+    class Meta:
+        """Job attributes."""
+
+        name = "Replace configuration"
+        description = "Replace device configuration with intended configuration"
+        read_only = True
+
+    tenant_group = FormEntry.tenant_group
+    tenant = FormEntry.tenant
+    region = FormEntry.region
+    site = FormEntry.site
+    role = FormEntry.role
+    manufacturer = FormEntry.manufacturer
+    platform = FormEntry.platform
+    device_type = FormEntry.device_type
+    device = FormEntry.device
+    dry_run = FormEntry.dry_run
+
+    def run(self, data, commit) -> None:
+        """Run configure device job."""
+        # Init Nornir and run configure device task for each device
+        try:
+            with init_nornir(data) as nornir_obj:
+                nr = nornir_obj.with_processors([LogResult(self, data)])
+                nr.run(
+                    task=self._config_device,
+                    name=self.name,
+                )
+        except Exception as err:
+            self.log_failure(None, f"```\n{err}\n```")
+            raise
+
+    def _config_device(self, task: Task) -> Result:
+        """NAPALM configure task."""
+        # Get device object and intended configuration
+        device_obj = task.host.data["obj"]
+        intended_config = models.GoldenConfig.objects.get(
+            device=device_obj
+        ).intended_config
+
+        # Run NAPALM task to configure device with intended config
+        task.run(
+            task=napalm_configure,
+            replace=True,
             configuration=intended_config,
         )
