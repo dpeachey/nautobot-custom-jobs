@@ -1,7 +1,6 @@
 """Nautobot device configuration jobs."""
 
-from xmlrpc.client import Boolean
-from nautobot_golden_config import models
+from nautobot_golden_config.models import GoldenConfig
 from nautobot_golden_config.utilities.helper import get_job_filter
 
 from nautobot_plugin_nornir.constants import NORNIR_SETTINGS
@@ -163,7 +162,7 @@ class MergeConfig(FormEntry, Job):
         """NAPALM configure task."""
         # Get device object and intended configuration
         device_obj = task.host.data["obj"]
-        intended_config = models.GoldenConfig.objects.get(
+        intended_config = GoldenConfig.objects.get(
             device=device_obj
         ).intended_config
 
@@ -214,7 +213,7 @@ class ReplaceConfig(FormEntry, Job):
         """NAPALM configure task."""
         # Get device object and intended configuration
         device_obj = task.host.data["obj"]
-        intended_config = models.GoldenConfig.objects.get(
+        intended_config = GoldenConfig.objects.get(
             device=device_obj
         ).intended_config
 
@@ -223,4 +222,55 @@ class ReplaceConfig(FormEntry, Job):
             task=napalm_configure,
             replace=True,
             configuration=intended_config,
+        )
+
+
+class RestoreFromBackup(FormEntry, Job):
+    """Restore configuration from backup job."""
+
+    class Meta:
+        """Job attributes."""
+
+        name = "Restore configuration from backup"
+        description = "Replace device configuration with latest backup configuration"
+        read_only = True
+
+    tenant_group = FormEntry.tenant_group
+    tenant = FormEntry.tenant
+    region = FormEntry.region
+    site = FormEntry.site
+    role = FormEntry.role
+    manufacturer = FormEntry.manufacturer
+    platform = FormEntry.platform
+    device_type = FormEntry.device_type
+    device = FormEntry.device
+    dry_run = FormEntry.dry_run
+
+    def run(self, data, commit) -> None:
+        """Run configure device job."""
+        # Init Nornir and run configure device task for each device
+        try:
+            with init_nornir(data) as nornir_obj:
+                nr = nornir_obj.with_processors([LogResult(self, data)])
+                nr.run(
+                    task=self._config_device,
+                    name=self.name,
+                )
+        except Exception as err:
+            self.log_failure(None, f"```\n{err}\n```")
+            raise
+
+    def _config_device(self, task: Task) -> Result:
+        """NAPALM configure task."""
+        # Get device object and backup configuration
+        device_obj = task.host.data["obj"]
+        backup_config = GoldenConfig.objects.get(
+            device=device_obj
+        ).backup_config
+
+        # Run NAPALM task to configure device with backup config
+        task.run(
+            task=napalm_configure,
+            replace=True,
+            configuration=backup_config,
         )
